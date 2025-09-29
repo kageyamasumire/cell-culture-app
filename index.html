@@ -1,109 +1,194 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>質量・分子量・濃度・体積 相互計算機</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>モル濃度（Selleck式）計算機：単位切替対応</title>
 <style>
-body {
-  background:#0f172a;
-  color:#e5e7eb;
-  font-family:sans-serif;
-  padding:20px;
-  line-height:1.6;
-}
-h2 {margin-top:0;}
-.inlineinputs {
-  display:flex;
-  flex-wrap:wrap;
-  gap:12px;
-  align-items:center;
-  margin-bottom:12px;
-}
-.inlineinputs label {
-  margin-right:4px;
-}
-.inlineinputs input {
-  width:90px;
-  padding:6px;
-  border-radius:6px;
-  border:1px solid #334155;
-  background:#0b1220;
-  color:#e5e7eb;
-}
-button {
-  margin-top:8px;
-  padding:8px 14px;
-  border-radius:6px;
-  border:0;
-  background:#2563eb;
-  color:white;
-  font-weight:600;
-  cursor:pointer;
-}
-.result {
-  margin-top:14px;
-  white-space:pre-wrap;
-  background:#0b1220;
-  border:1px dashed #334155;
-  padding:10px;
-  border-radius:6px;
-}
-.note {
-  font-size:0.9rem;
-  color:#94a3b8;
-  margin-top:10px;
-}
+  body{background:#0f172a;color:#e5e7eb;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo}
+  .wrap{max-width:900px;margin:0 auto;padding:18px}
+  h1{font-size:1.25rem;margin:0 0 4px}
+  p.sub{color:#cbd5e1;margin:0 0 14px}
+  .card{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:14px;margin:12px 0}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .line{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+  label{color:#cbd5e1}
+  input[type="number"]{width:120px;padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
+  select{padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
+  .eq{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;color:#93c5fd}
+  .btn{padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:700}
+  .primary{background:#2563eb;color:#fff}
+  .secondary{background:#374151;color:#fff}
+  .out{white-space:pre-wrap;background:#0b1220;border:1px dashed #334155;border-radius:10px;padding:12px;margin-top:10px}
+  .muted{color:#94a3b8;font-size:.9rem}
+  .solve{display:flex;align-items:center;gap:6px;margin-left:6px;color:#cbd5e1}
 </style>
 </head>
 <body>
+<div class="wrap">
+  <h1>モル濃度（Selleck式）計算機</h1>
+  <p class="sub">方程式：<span class="eq">質量 (mg) = 濃度 (mM) × 体積 (mL) × 分子量 (g/mol)</span></p>
 
-<h2>質量・分子量・濃度・体積 相互計算機</h2>
-<p>4つのうち<strong>3つを入力すると、残り1つを計算</strong>します。<br>
-式は <code>C = (m / MW) / V</code> （C=濃度, m=質量(g), MW=分子量, V=体積(L)）。</p>
+  <div class="card">
+    <div class="line">
+      <strong>質量</strong>：
+      <input id="mass" type="number" step="any" placeholder="数値">
+      <select id="uMass">
+        <option>mg</option><option>g</option><option>µg</option>
+      </select>
+      <label class="solve"><input type="radio" name="solve" value="mass"> これを計算</label>
+    </div>
 
-<div class="inlineinputs">
-  <label>質量(g):</label>
-  <input type="number" id="mass" step="any">
+    <div class="line">
+      <strong>濃度</strong>：
+      <input id="conc" type="number" step="any" placeholder="数値">
+      <select id="uConc">
+        <option>mM</option><option>M</option><option>µM</option><option>nM</option>
+      </select>
+      <label class="solve"><input type="radio" name="solve" value="conc"> これを計算</label>
+    </div>
 
-  <label>分子量:</label>
-  <input type="number" id="mw" step="any">
+    <div class="line">
+      <strong>体積</strong>：
+      <input id="vol" type="number" step="any" placeholder="数値">
+      <select id="uVol">
+        <option>mL</option><option>L</option><option>µL</option>
+      </select>
+      <label class="solve"><input type="radio" name="solve" value="vol"> これを計算</label>
+    </div>
 
-  <label>濃度(M):</label>
-  <input type="number" id="conc" step="any">
+    <div class="line">
+      <strong>分子量</strong>：
+      <input id="mw" type="number" step="any" placeholder="g/mol">
+      <span class="muted">(g/mol)</span>
+    </div>
 
-  <label>体積(L):</label>
-  <input type="number" id="vol" step="any">
-</div>
+    <div class="row" style="margin-top:6px">
+      <button class="btn primary" onclick="calc()">計算</button>
+      <button class="btn secondary" onclick="resetAll()">リセット</button>
+    </div>
 
-<button onclick="calc()">計算する</button>
-<div id="out" class="result"></div>
+    <div id="out" class="out" style="display:none"></div>
+    <p class="muted" style="margin-top:8px">
+      ※ 単位は自動で内部換算します。計算したい項目に「これを計算」をつけ、他の値と分子量を入力してください。<br>
+      例）<b>質量</b>を計算：濃度=5 mM、体積=10 mL、分子量=180.16 を入れて「計算」。
+    </p>
+  </div>
 
-<div class="note">
-👉 入力例：<br>
-- 分子量=58.44, 濃度=0.1, 体積=0.1 を入力 → 必要な質量が出る<br>
-- 質量=0.5844, 分子量=58.44, 体積=0.1 を入力 → 濃度が出る
+  <div class="card">
+    <h3>やさしい説明</h3>
+    <p class="muted">
+      ① まず単位をそろえます（mg / mM / mL）。<br>
+      ② 式 <span class="eq">mg = mM × mL × g/mol</span> を使います。<br>
+      ③ 求めたいものに合わせて式を並べ替えます：<br>
+      ・濃度 = mg ÷ (mL × g/mol)　・体積 = mg ÷ (mM × g/mol)　・質量 = mM × mL × g/mol
+    </p>
+  </div>
 </div>
 
 <script>
-function fmt(x){
+// 単位変換
+function massToMg(val, u){ // -> mg
+  if (u==='mg') return val;
+  if (u==='g')  return val*1000;
+  if (u==='µg' || u==='ug') return val/1000;
+  return val;
+}
+function mgToBest(mg){
+  if (mg>=1000) return {v:(mg/1000), u:'g'};
+  if (mg>=1)    return {v:mg,       u:'mg'};
+  return {v:(mg*1000), u:'µg'};
+}
+function concTo_mM(val, u){ // -> mM
+  if (u==='mM') return val;
+  if (u==='M')  return val*1000;
+  if (u==='µM' || u==='uM') return val/1000;
+  if (u==='nM') return val/1e6;
+  return val;
+}
+function mM_toBest(mM){
+  if (mM>=1000) return {v:mM/1000, u:'M'};
+  if (mM>=1)    return {v:mM,      u:'mM'};
+  if (mM>=1e-3) return {v:mM*1000, u:'µM'};
+  return {v:mM*1e6, u:'nM'};
+}
+function volTo_mL(val, u){ // -> mL
+  if (u==='mL') return val;
+  if (u==='L')  return val*1000;
+  if (u==='µL' || u==='uL') return val/1000;
+  return val;
+}
+function mL_toBest(mL){
+  if (mL>=1000) return {v:mL/1000, u:'L'};
+  if (mL>=1)    return {v:mL,      u:'mL'};
+  return {v:mL*1000, u:'µL'};
+}
+function fmt(x, d=6){
   if (!isFinite(x)) return String(x);
-  return Number(x).toPrecision(5).replace(/(\.\d*?[1-9])0+$/,'$1').replace(/\.0+$/,'');
+  const s = Number(x).toPrecision(d);
+  return s.replace(/(\.\d*?[1-9])0+$/,'$1').replace(/\.0+$/,'');
 }
 
 function calc(){
-  let m = parseFloat(document.getElementById('mass').value);
-  let mw = parseFloat(document.getElementById('mw').value);
-  let c = parseFloat(document.getElementById('conc').value);
-  let v = parseFloat(document.getElementById('vol').value);
+  const target = document.querySelector('input[name="solve"]:checked')?.value;
+  const massVal = parseFloat(document.getElementById('mass').value);
+  const uMass   = document.getElementById('uMass').value;
+  const concVal = parseFloat(document.getElementById('conc').value);
+  const uConc   = document.getElementById('uConc').value;
+  const volVal  = parseFloat(document.getElementById('vol').value);
+  const uVol    = document.getElementById('uVol').value;
+  const mw      = parseFloat(document.getElementById('mw').value);
 
-  let known = [!isNaN(m), !isNaN(mw), !isNaN(c), !isNaN(v)].filter(x=>x).length;
-  if(known < 3){
-    document.getElementById('out').textContent = "⚠️ 4つのうち3つを入力してください。";
-    return;
+  const outEl = document.getElementById('out');
+  outEl.style.display='block';
+
+  if(!target){ outEl.textContent='計算したい項目に「これを計算」をチェックしてください。'; return; }
+  if(!(mw>0)){ outEl.textContent='分子量（g/mol）を入力してください。'; return; }
+
+  // 標準単位に変換：mg / mM / mL
+  const mg  = (massVal>0) ? massToMg(massVal, uMass) : NaN;
+  const mM  = (concVal>0) ? concTo_mM(concVal, uConc) : NaN;
+  const mL  = (volVal>0)  ? volTo_mL(volVal,  uVol)   : NaN;
+
+  // 式: mg = mM * mL * MW(g/mol)
+  let msg = '';
+
+  if(target==='mass'){
+    if(!(mM>0 && mL>0)){ outEl.textContent='濃度と体積を入力してください。'; return; }
+    const mgCalc = mM * mL * mw;
+    const best = mgToBest(mgCalc);
+    msg = `質量 = 濃度 × 体積 × 分子量
+= ${fmt(mM)} mM × ${fmt(mL)} mL × ${fmt(mw)} g/mol
+= ${fmt(mgCalc)} mg ≈ ${fmt(best.v)} ${best.u}`;
+  }
+  else if(target==='conc'){
+    if(!(isFinite(mg) && mL>0)){ outEl.textContent='質量と体積を入力してください。'; return; }
+    const mMcalc = mg / (mL * mw);
+    const best = mM_toBest(mMcalc);
+    msg = `濃度 = 質量 ÷ (体積 × 分子量)
+= ${fmt(mg)} mg ÷ (${fmt(mL)} mL × ${fmt(mw)} g/mol)
+= ${fmt(mMcalc)} mM ≈ ${fmt(best.v)} ${best.u}`;
+  }
+  else if(target==='vol'){
+    if(!(isFinite(mg) && mM>0)){ outEl.textContent='質量と濃度を入力してください。'; return; }
+    const mLcalc = mg / (mM * mw);
+    const best = mL_toBest(mLcalc);
+    msg = `体積 = 質量 ÷ (濃度 × 分子量)
+= ${fmt(mg)} mg ÷ (${fmt(mM)} mM × ${fmt(mw)} g/mol)
+= ${fmt(mLcalc)} mL ≈ ${fmt(best.v)} ${best.u}`;
   }
 
-  // どれを計算するか
-  if(isNaN(m) && !isNaN(mw) && !isNaN(c) && !isNaN(v)){
-    m = c * v * mw; // g
-  } else if(isNaN(c) && !isNaN(m) && !
+  outEl.textContent = `【結果】\n` + msg;
+}
+
+function resetAll(){
+  ['mass','conc','vol','mw'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('uMass').value='mg';
+  document.getElementById('uConc').value='mM';
+  document.getElementById('uVol').value='mL';
+  const c = document.querySelector('input[name="solve"]:checked'); if(c) c.checked=false;
+  document.getElementById('out').style.display='none';
+}
+</script>
+</body>
+</html>
