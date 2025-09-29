@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>試薬調整・細胞培養 計算シート（単一HTML）</title>
+<style>
+  :root{--gap:14px;--radius:12px}
+  *{box-sizing:border-box}
+  body{
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Hiragino Kaku Gothic ProN","Noto Sans CJK JP","Yu Gothic",Meiryo,sans-serif;
+    margin:0; padding:18px;
+    background:#0f172a; color:#e5e7eb;
+  }
+  h1{font-size:1.25rem;margin:0 0 8px}
+  p.sub{color:#cbd5e1;margin:0 0 20px}
+  .wrap{max-width:900px;margin:0 auto}
+  .card{
+    background:#111827;border:1px solid #1f2937;border-radius:var(--radius);
+    padding:16px;margin-bottom:var(--gap);box-shadow:0 2px 10px rgba(0,0,0,.25);
+  }
+  .grid{display:grid;grid-template-columns:1fr;gap:12px}
+  @media (min-width:720px){ .grid{grid-template-columns: 1fr 1fr} }
+  label{display:block;font-size:.9rem;margin-bottom:6px;color:#cbd5e1}
+  input, select{
+    width:100%;padding:12px;border-radius:10px;
+    border:1px solid #334155;background:#0b1220;color:#e5e7eb;outline:none;
+  }
+  input:focus, select:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(96,165,250,.15)}
+  button{
+    padding:12px 16px;border:0;border-radius:10px;background:#2563eb;color:white;
+    cursor:pointer;font-weight:600;
+  }
+  button.secondary{background:#374151}
+  .result{
+    background:#0b1220;border:1px dashed #334155;border-radius:10px;padding:12px;margin-top:10px;white-space:pre-wrap
+  }
+  .note{font-size:.85rem;color:#9ca3af}
+  .hl{color:#93c5fd}
+  .footer{font-size:.8rem;color:#9ca3af;margin-top:8px}
+  .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#0b1220;border:1px solid #334155;margin-right:6px}
+  .flex{display:flex;gap:8px;flex-wrap:wrap}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid #1f2937;padding:8px;text-align:right;background:#0b1220}
+  th{background:#0f1a32;text-align:center}
+  tfoot td{font-weight:700;background:#0f1a32}
+  .row-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  .muted{color:#94a3b8;font-size:.9rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>試薬調整・計算シート</h1>
+  <p class="sub">最小構成の“単一HTMLファイル”版。ブラウザで開くだけ。オフラインOK。</p>
+
+  <!-- 1) %（w/v, v/v, w/w） -->
+  <div class="card">
+    <h2>① 濃度%で作る（w/v, v/v, w/w）</h2>
+    <div class="grid">
+      <div>
+        <label>濃度の種類</label>
+        <select id="pctType">
+          <option value="w/v">%（w/v）固体→体積仕上げ</option>
+          <option value="v/v">%（v/v）液体→体積仕上げ</option>
+          <option value="w/w">%（w/w）固体→質量仕上げ</option>
+        </select>
+      </div>
+      <div>
+        <label>目標濃度（%）</label>
+        <input type="number" id="pct" placeholder="例: 10" step="any">
+      </div>
+      <div>
+        <label>仕上げ体積（mL）または仕上げ質量（g）</label>
+        <input type="number" id="pctTotal" placeholder="例: 100" step="any">
+      </div>
+      <div>
+        <button onclick="calcPct()">計算する</button>
+        <button class="secondary" onclick="clearPct()">クリア</button>
+      </div>
+    </div>
+    <div id="pctOut" class="result" style="display:none"></div>
+    <div class="note">w/v, v/v は <span class="hl">溶質量(または体積) = % × 仕上げ体積 / 100</span>。w/w は <span class="hl">溶質質量 = % × 仕上げ質量 / 100</span>。</div>
+  </div>
+
+  <!-- 2) モル濃度 M -->
+  <div class="card">
+    <h2>② モル濃度（M）で作る</h2>
+    <div class="grid">
+      <div>
+        <label>分子量 MW（g/mol）</label>
+        <input type="number" id="mw" placeholder="例: 58.44 (NaCl)" step="any">
+      </div>
+      <div>
+        <label>目標濃度 C（M）</label>
+        <input type="number" id="molar" placeholder="例: 0.5" step="any">
+      </div>
+      <div>
+        <label>仕上げ体積 V（mL）</label>
+        <input type="number" id="vol_mL" placeholder="例: 100" step="any">
+      </div>
+      <div>
+        <button onclick="calcMolar()">計算する</button>
+        <button class="secondary" onclick="clearMolar()">クリア</button>
+      </div>
+    </div>
+    <div id="molarOut" class="result" style="display:none"></div>
+    <div class="note">基本式：<span class="hl">必要質量 g = MW × C(M) × V(L)</span>（mLはLへ変換）。</div>
+  </div>
+
+  <!-- 3) 希釈 C1V1 = C2V2 -->
+  <div class="card">
+    <h2>③ 希釈（C1V1 = C2V2）</h2>
+    <div class="grid">
+      <div>
+        <label>原液濃度 C1（同じ単位）</label>
+        <input type="number" id="c1" placeholder="例: 5 (M または % など)" step="any">
+      </div>
+      <div>
+        <label>目標濃度 C2（同じ単位）</label>
+        <input type="number" id="c2" placeholder="例: 0.1" step="any">
+      </div>
+      <div>
+        <label>仕上げ体積 V2（mL）</label>
+        <input type="number" id="v2" placeholder="例: 50" step="any">
+      </div>
+      <div>
+        <button onclick="calcDilution()">計算する</button>
+        <button class="secondary" onclick="clearDilution()">クリア</button>
+      </div>
+    </div>
+    <div id="dilOut" class="result" style="display:none"></div>
+    <div class="note">解きたいのは <span class="hl">V1 = (C2 × V2) / C1</span>。加える溶媒量は <span class="hl">V2 − V1</span>。</div>
+  </div>
+
+  <!-- 4) 細胞培養ツール -->
+  <div class="card">
+    <h2>④ 細胞培養ツール</h2>
+
+    <!-- 4-1. ヘモサイトメータ -->
+    <h3>4-1) 細胞数カウント（ヘモサイトメータ）</h3>
+    <div class="grid">
+      <div>
+        <label>平均細胞数 / 大区画（1枠あたり）</label>
+        <input type="number" id="avgCount" placeholder="例: 85" step="any">
+      </div>
+      <div>
+        <label>希釈倍率（染色や希釈したら）</label>
+        <input type="number" id="dilFactor" placeholder="例: 2（トリパンブルー1:1等）" step="any">
+      </div>
+      <div>
+        <label>サンプル体積（mL, 任意）</label>
+        <input type="number" id="sampleVol" placeholder="例: 10" step="any">
+      </div>
+      <div>
+        <button onclick="calcCount()">計算する</button>
+        <button class="secondary" onclick="clearCount()">クリア</button>
+      </div>
+    </div>
+    <div id="countOut" class="result" style="display:none"></div>
+    <div class="note">式：<span class="hl">細胞濃度（cells/mL）= 平均/枠 × 10⁴ × 希釈倍率</span>。Neubauerの1大区画の体積は 0.1 mm³ = 10⁻⁴ mL。</div>
+
+    <hr style="border:0;border-top:1px solid #1f2937;margin:16px 0">
+
+    <!-- 4-2. 播種量 -->
+    <h3>4-2) 播種量計算（シーディング）</h3>
+    <div class="grid">
+      <div>
+        <label>現在の細胞濃度（cells/mL）</label>
+        <input type="number" id="concCells" placeholder="例: 1.2e6" step="any">
+      </div>
+      <div>
+        <label>目標セル数 / well（cells）</label>
+        <input type="number" id="targetPerWell" placeholder="例: 1.0e5" step="any">
+      </div>
+      <div>
+        <label>ウェル数</label>
+        <input type="number" id="numWells" placeholder="例: 6" step="1">
+      </div>
+      <div>
+        <label>最終体積 / well（mL）</label>
+        <input type="number" id="finalVolPerWell" placeholder="例: 2（6 wellなら2 mL目安）" step="any">
+      </div>
+      <div>
+        <button onclick="calcSeeding()">計算する</button>
+        <button class="secondary" onclick="clearSeeding()">クリア</button>
+      </div>
+    </div>
+    <div id="seedOut" class="result" style="display:none"></div>
+    <div class="note">式：<span class="hl">必要細胞懸濁液量（mL）= 目標セル数 / 現在濃度</span>。不足分は培地で調整。</div>
+
+    <hr style="border:0;border-top:1px solid #1f2937;margin:16px 0">
+
+    <!-- 4-3. MOI -->
+    <h3>4-3) MOI計算（ウイルス導入）</h3>
+    <div class="grid">
+      <div>
+        <label>対象細胞数（cells, 1 well/フラスコ）</label>
+        <input type="number" id="moiCells" placeholder="例: 2.0e5" step="any">
+      </div>
+      <div>
+        <label>MOI（感染数/細胞）</label>
+        <input type="number" id="moiValue" placeholder="例: 5" step="any">
+      </div>
+      <div>
+        <label>ウイルスタイター（TU/mL または GC/mL）</label>
+        <input type="number" id="moiTiter" placeholder="例: 1.0e8" step="any">
+      </div>
+      <div>
+        <label>ウェル数（任意、総量用）</label>
+        <input type="number" id="moiWells" placeholder="例: 6" step="1">
+      </div>
+      <div>
+        <button onclick="calcMOI()">計算する</button>
+        <button class="secondary" onclick="clearMOI()">クリア</button>
+      </div>
+    </div>
+    <div id="moiOut" class="result" style="display:none"></div>
+    <div class="note">式：<span class="hl">必要ウイルス量（mL）= MOI × 細胞数 / タイター</span>。</div>
+
+    <hr style="border:0;border-top:1px solid #1f2937;margin:16px 0">
+
+    <!-- 4-4. 培地調製 -->
+    <h3>4-4) 培地調製（FBS%・100X添加剤）</h3>
+    <div class="grid">
+      <div>
+        <label>仕上げ体積（mL）</label>
+        <input type="number" id="mediaTotal" placeholder="例: 500" step="any">
+      </div>
+      <div>
+        <label>FBS割合（%）</label>
+        <input type="number" id="fbsPct" placeholder="例: 10" step="any">
+      </div>
+      <div>
+        <label>100X添加剤の本数（P/S, NEAA など）</label>
+        <input type="number" id="num100x" placeholder="例: 1" step="1">
+      </div>
+      <div>
+        <button onclick="calcMedia()">計算する</button>
+        <button class="secondary" onclick="clearMedia()">クリア</button>
+      </div>
+    </div>
+    <div id="mediaOut" class="result" style="display:none"></div>
+    <div class="note">FBS体積 = 総量×%/100。100Xは総量の1/100ずつ。残りは基礎培地。</div>
+
+    <hr style="border:0;border-top:1px solid #1f2937;margin:16px 0">
+
+    <!-- 4-5. カウント入力→合計/平均 -->
+    <h3>4-5) 生・死細胞カウント（合計・平均）</h3>
+    <p class="muted">下の表に各回の <b>生</b> と <b>死</b> を入力 → 自動で合計・平均と、全細胞（生＋死）の合計・平均を計算します。</p>
+    <div class="row-actions">
+      <button onclick="addRow()">行を追加</button>
+      <button class="secondary" onclick="removeRow()">最後の行を削除</button>
+      <button class="secondary" onclick="clearTable()">クリア</button>
+    </div>
+    <div style="overflow-x:auto;margin-top:8px">
+      <table id="tbl">
+        <thead>
+          <tr><th style="text-align:center">回</th><th>生細胞</th><th>死細胞</th><th>合計（生+死）</th></tr>
+        </thead>
+        <tbody id="tbody">
+          <!-- 初期4行 -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>合計</td>
+            <td id="sumLive">0</td>
+            <td id="sumDead">0</td>
+            <td id="sumTotal">0</td>
+          </tr>
+          <tr>
+            <td>平均（1回あたり）</td>
+            <td id="avgLive">0</td>
+            <td id="avgDead">0</td>
+            <td id="avgTotal">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- 5) レシピ出力 / メモ -->
+  <div class="card">
+    <h2>安全メモ & 使い方</h2>
+    <div class="flex">
+      <span class="pill">秤量は小数第3位まで目安</span>
+      <span class="pill">メスアップは最後に</span>
+      <span class="pill">強酸・強塩基は冷却＋撹拌しながら</span>
+      <span class="pill">%・M など単位を混同しない</span>
+      <span class="pill">必要ならpH調整は別途</span>
+    </div>
+    <p class="footer">© 2025 単一HTML。自由に改変OK。</p>
+  </div>
+</div>
+
+<script>
+function fmt(x, d=3){
+  if (!isFinite(x)) return String(x);
+  const s = Number(x).toFixed(d);
+  return s.replace(/\.?0+$/, '');
+}
+function show(id, text){
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.textContent = text;
+}
+
+/* ① % */
+function calcPct(){
+  const typ = document.getElementById('pctType').value;
+  const pct = parseFloat(document.getElementById('pct').value);
+  const total = parseFloat(document.getElementById('pctTotal').value);
+  if(!(pct>0) || !(total>0)){ show('pctOut','入力を確認してください。'); return; }
+  if (typ==='w/v'){
+    const solute_g = pct/100 * total;
+    const steps = [
+      `【結果】溶質 ${fmt(solute_g)} g を量り取り、溶媒で約 ${fmt(total*0.8)} mL に溶かす。`,
+      `完全に溶解後、メスアップして最終体積 ${fmt(total)} mL にする（w/v%）。`
+    ].join('\\n'); show('pctOut', steps);
+  }else if(typ==='v/v'){
+    const solute_mL = pct/100 * total;
+    const steps = [
+      `【結果】溶質液 ${fmt(solute_mL)} mL を量り取り、溶媒を加えて混合。`,
+      `最後にメスアップして最終体積 ${fmt(total)} mL にする（v/v%）。`
+    ].join('\\n'); show('pctOut', steps);
+  }else{
+    const solute_g = pct/100 * total;
+    const solvent_g = total - solute_g;
+    const steps = [
+      `【結果】溶質 ${fmt(solute_g)} g と 溶媒 ${fmt(solvent_g)} g を混合して、`,
+      `総質量 ${fmt(total)} g の ${fmt(pct)}%（w/w）を作る。`
+    ].join('\\n'); show('pctOut', steps);
+  }
+}
+function clearPct(){ ['pct','pctTotal'].forEach(id=>document.getElementById(id).value=''); document.getElementById('pctOut').style.display='none'; }
+
+/* ② Molar */
+function calcMolar(){
+  const mw = parseFloat(document.getElementById('mw').value);
+  const C = parseFloat(document.getElementById('molar').value);
+  const V_mL = parseFloat(document.getElementById('vol_mL').value);
+  if(!(mw>0) || !(C>0) || !(V_mL>0)){ show('molarOut','入力を確認してください。'); return; }
+  const grams = mw*C*(V_mL/1000);
+  const steps = [
+    `【結果】必要質量: ${fmt(grams)} g`,
+    `手順: ${fmt(grams)} g を量り取り、溶媒で約 ${fmt(V_mL*0.8)} mL に溶かす。`,
+    `完全に溶けたらメスアップして ${fmt(V_mL)} mL とする。`
+  ].join('\\n'); show('molarOut', steps);
+}
+function clearMolar(){ ['mw','molar','vol_mL'].forEach(id=>document.getElementById(id).value=''); document.getElementById('molarOut').style.display='none'; }
+
+/* ③ 希釈 */
+function calcDilution(){
+  const C1 = parseFloat(document.getElementById('c1').value);
+  const C2 = parseFloat(document.getElementById('c2').value);
+  const V2 = parseFloat(document.getElementById('v2').value);
+  if(!(C1>0) || !(C2>0) || !(V2>0)){ show('dilOut','入力を確認してください。'); return; }
+  if (C2 >= C1){ show('dilOut','C2 は C1 より小さくしてください（希釈）。'); return; }
+  const V1 = (C2*V2)/C1;
+  const solvent = V2 - V1;
+  const steps = [
+    `【結果】原液量 V1 = ${fmt(V1)} mL`,
+    `溶媒量 = ${fmt(solvent)} mL（合計 ${fmt(V2)} mL）`,
+    `手順: 原液 ${fmt(V1)} mL をピペットし、溶媒 ${fmt(solvent)} mL を加えて混合。`
+  ].join('\\n'); show('dilOut', steps);
+}
+function clearDilution(){ ['c1','c2','v2'].forEach(id=>document.getElementById(id).value=''); document.getElementById('dilOut').style.display='none'; }
+
+/* ④-1 ヘモサイトメータ */
+function calcCount(){
+  const avg = parseFloat(document.getElementById('avgCount').value);
+  const dil = parseFloat(document.getElementById('dilFactor').value || '1');
+  const vol = parseFloat(document.getElementById('sampleVol').value || '0');
+  if(!(avg>0) || !(dil>0)){ show('countOut','入力を確認してください。'); return; }
+  const cells_per_mL = avg * 1e4 * dil;
+  let lines = [`【結果】濃度: ${fmt(cells_per_mL,0)} cells/mL`];
+  if (vol>0){
+    const total = cells_per_mL * vol;
+    lines.push(`総細胞数（サンプル ${fmt(vol)} mL）: ${fmt(total,0)} cells`);
+  }
+  lines.push('メモ: トリパンブルー等の希釈は希釈倍率に含めてください。');
+  show('countOut', lines.join('\\n'));
+}
+function clearCount(){ ['avgCount','dilFactor','sampleVol'].forEach(id=>document.getElementById(id).value=''); document.getElementById('countOut').style.display='none'; }
+
+/* ④-2 播種量 */
+function calcSeeding(){
+  const conc = parseFloat(document.getElementById('concCells').value);
+  const target = parseFloat(document.getElementById('targetPerWell').value);
+  const wells = parseInt(document.getElementById('numWells').value,10);
+  const finalPer = parseFloat(document.getElementById('finalVolPerWell').value);
+  if(!(conc>0) || !(target>0) || !(wells>0) || !(finalPer>0)){ show('seedOut','入力を確認してください。'); return; }
+  const volPerWell_mL = target / conc;
+  const mediaPerWell_mL = Math.max(finalPer - volPerWell_mL, 0);
+  const totalCells = target * wells;
+  const totalCellVol = volPerWell_mL * wells;
+  const totalMedia = mediaPerWell_mL * wells;
+  const steps = [
+    `【結果】1 wellあたり：細胞懸濁液 ${fmt(volPerWell_mL,3)} mL ＋ 培地 ${fmt(mediaPerWell_mL,3)} mL（合計 ${fmt(finalPer,3)} mL）`,
+    `プレート合計（${wells} wells）：細胞懸濁液 ${fmt(totalCellVol,3)} mL、培地 ${fmt(totalMedia,3)} mL、細胞数 合計 ${fmt(totalCells,0)} cells`,
+    `手順: 事前に懸濁を均一化し、攪拌しながら各wellに分注。`
+  ].join('\\n');
+  show('seedOut', steps);
+}
+function clearSeeding(){ ['concCells','targetPerWell','numWells','finalVolPerWell'].forEach(id=>document.getElementById(id).value=''); document.getElementById('seedOut').style.display='none'; }
+
+/* ④-3 MOI */
+function calcMOI(){
+  const cells = parseFloat(document.getElementById('moiCells').value);
+  const moi = parseFloat(document.getElementById('moiValue').value);
+  const titer = parseFloat(document.getElementById('moiTiter').value);
+  const wells = parseInt(document.getElementById('moiWells').value || '1',10);
+  if(!(cells>0) || !(moi>0) || !(titer>0) || !(wells>0)){ show('moiOut','入力を確認してください。'); return; }
+  const volPerWell_mL = (moi * cells) / titer;
+  const total_mL = volPerWell_mL * wells;
+  const lines = [
+    `【結果】必要ウイルス量: 1 wellあたり ${fmt(volPerWell_mL,4)} mL`,
+    `合計（${wells} wells）: ${fmt(total_mL,4)} mL`,
+    `メモ: 低温で取り扱い、必要に応じて希釈して添加（ポリブレン等は別途条件）。`
+  ];
+  show('moiOut', lines.join('\\n'));
+}
+function clearMOI(){ ['moiCells','moiValue','moiTiter','moiWells'].forEach(id=>document.getElementById(id).value=''); document.getElementById('moiOut').style.display='none'; }
+
+/* ④-4 培地 */
+function calcMedia(){
+  const total = parseFloat(document.getElementById('mediaTotal').value);
+  const fbs = parseFloat(document.getElementById('fbsPct').value);
+  const n100 = parseInt(document.getElementById('num100x').value || '0',10);
+  if(!(total>0) || !(fbs>=0) || !(n100>=0)){ show('mediaOut','入力を確認してください。'); return; }
+  const fbsVol = total * (fbs/100);
+  const add100 = n100>0 ? total * (1/100) * n100 : 0;
+  const base = Math.max(total - fbsVol - add100, 0);
+  const lines = [
+    `【結果】FBS: ${fmt(fbsVol,3)} mL、100X添加剤×${n100}: ${fmt(add100,3)} mL、基礎培地: ${fmt(base,3)} mL（合計 ${fmt(total,3)} mL）`,
+    `手順: 基礎培地 → 100X添加剤 → FBS の順に冷所で調製。`
+  ];
+  show('mediaOut', lines.join('\\n'));
+}
+function clearMedia(){ ['mediaTotal','fbsPct','num100x'].forEach(id=>document.getElementById(id).value=''); document.getElementById('mediaOut').style.display='none'; }
+
+/* ④-5 表：生・死入力 → 合計/平均 */
+function addRow(live='', dead=''){
+  const tbody = document.getElementById('tbody');
+  const idx = tbody.children.length + 1;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="text-align:center;background:#111827">${idx}回目</td>
+    <td><input type="number" step="any" value="${live}" oninput="recalcTable()" style="width:100%;background:#0b1220;color:#e5e7eb;border:1px solid #334155;border-radius:8px;padding:6px"></td>
+    <td><input type="number" step="any" value="${dead}" oninput="recalcTable()" style="width:100%;background:#0b1220;color:#e5e7eb;border:1px solid #334155;border-radius:8px;padding:6px"></td>
+    <td class="rowTotal">0</td>
+  `;
+  tbody.appendChild(tr);
+  recalcTable();
+}
+function removeRow(){
+  const tbody = document.getElementById('tbody');
+  if (tbody.children.length>0){ tbody.removeChild(tbody.lastElementChild); recalcTable(); }
+}
+function clearTable(){
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  for (let i=0;i<4;i++) addRow();
+  recalcTable();
+}
+function recalcTable(){
+  const tbody = document.getElementById('tbody');
+  let sumLive=0, sumDead=0, sumTotal=0, n=0;
+  [...tbody.children].forEach((tr,i)=>{
+    tr.children[0].textContent = (i+1)+'回目';
+    const live = parseFloat(tr.children[1].querySelector('input').value || '0');
+    const dead = parseFloat(tr.children[2].querySelector('input').value || '0');
+    const tot  = live + dead;
+    tr.children[3].textContent = isFinite(tot)? fmt(tot,0) : '0';
+    if (isFinite(live) || isFinite(dead)){ n++; }
+    sumLive += live; sumDead += dead; sumTotal += tot;
+  });
+  n = Math.max(n, tbody.children.length); // 入力行数で割る想定
+  document.getElementById('sumLive').textContent  = fmt(sumLive,0);
+  document.getElementById('sumDead').textContent  = fmt(sumDead,0);
+  document.getElementById('sumTotal').textContent = fmt(sumTotal,0);
+  document.getElementById('avgLive').textContent  = tbody.children.length? fmt(sumLive/ tbody.children.length,2): '0';
+  document.getElementById('avgDead').textContent  = tbody.children.length? fmt(sumDead/ tbody.children.length,2): '0';
+  document.getElementById('avgTotal').textContent = tbody.children.length? fmt(sumTotal/ tbody.children.length,2): '0';
+}
+// 初期4行
+window.addEventListener('DOMContentLoaded', ()=>{ for(let i=0;i<4;i++) addRow(); });
+</script>
+</body>
+</html>
