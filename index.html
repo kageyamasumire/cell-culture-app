@@ -1,334 +1,109 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
+<meta charset="UTF-8">
+<title>質量・分子量・濃度・体積 相互計算機</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>やさしいモラリティ計算機（Molarity & Dilution）</title>
 <style>
-  :root{--bg:#0f172a;--panel:#111827;--muted:#94a3b8;--line:#1f2937;--hi:#93c5fd}
-  *{box-sizing:border-box}
-  body{margin:0;padding:16px;background:var(--bg);color:#e5e7eb;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif}
-  .wrap{max-width:960px;margin:0 auto}
-  h1{font-size:1.3rem;margin:0 0 .25rem}
-  p.sub{color:#cbd5e1;margin:.25rem 0 1rem}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
-  .grid{display:grid;gap:10px}
-  @media(min-width:720px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:1fr 1fr 1fr}}
-  label{font-size:.9rem;color:#cbd5e1;display:block;margin:4px 0}
-  input,select{width:100%;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
-  input:focus,select:focus{outline:none;border-color:#60a5fa;box-shadow:0 0 0 3px rgba(96,165,250,.15)}
-  button{padding:10px 14px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer}
-  button.secondary{background:#374151}
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  .out{white-space:pre-wrap;background:#0b1220;border:1px dashed #334155;border-radius:10px;padding:12px;margin-top:10px}
-  .muted{color:var(--muted);font-size:.9rem}
-  .hl{color:var(--hi)}
-  .pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid #334155;background:#0b1220;margin-right:6px}
-  details{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:10px}
-  details>summary{cursor:pointer}
-  .ex{font-size:.95rem;line-height:1.6}
+body {
+  background:#0f172a;
+  color:#e5e7eb;
+  font-family:sans-serif;
+  padding:20px;
+  line-height:1.6;
+}
+h2 {margin-top:0;}
+.inlineinputs {
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  align-items:center;
+  margin-bottom:12px;
+}
+.inlineinputs label {
+  margin-right:4px;
+}
+.inlineinputs input {
+  width:90px;
+  padding:6px;
+  border-radius:6px;
+  border:1px solid #334155;
+  background:#0b1220;
+  color:#e5e7eb;
+}
+button {
+  margin-top:8px;
+  padding:8px 14px;
+  border-radius:6px;
+  border:0;
+  background:#2563eb;
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+}
+.result {
+  margin-top:14px;
+  white-space:pre-wrap;
+  background:#0b1220;
+  border:1px dashed #334155;
+  padding:10px;
+  border-radius:6px;
+}
+.note {
+  font-size:0.9rem;
+  color:#94a3b8;
+  margin-top:10px;
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>やさしいモラリティ計算機</h1>
-  <p class="sub">「どれだけの粉（g）を入れたらいい？」や「原液をどれだけ入れる？」を、<b>小学生でもわかる説明</b>つきで表示します。</p>
 
-  <!-- A) 必要質量（g / mg / µg）を出す： MW, 目標M, 体積 -->
-  <div class="card">
-    <h2>A. どれだけの「粉（質量）」が必要？（Molarity → Mass）</h2>
-    <div class="grid three">
-      <div>
-        <label>分子量 MW（g/mol）</label>
-        <input id="mw" type="number" placeholder="例: 58.44 (NaCl)" step="any">
-      </div>
-      <div>
-        <label>目標濃度</label>
-        <div class="row">
-          <input id="targetC" type="number" placeholder="例: 0.5" step="any" style="flex:1">
-          <select id="unitC">
-            <option value="M">M</option>
-            <option value="mM">mM</option>
-            <option value="uM">µM</option>
-            <option value="nM">nM</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label>仕上げ体積</label>
-        <div class="row">
-          <input id="targetV" type="number" placeholder="例: 100" step="any" style="flex:1">
-          <select id="unitV">
-            <option value="L">L</option>
-            <option value="mL" selected>mL</option>
-            <option value="uL">µL</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button onclick="calcMass()">計算する</button>
-      <button class="secondary" onclick="clearMass()">クリア</button>
-    </div>
-    <div id="outMass" class="out" style="display:none"></div>
+<h2>質量・分子量・濃度・体積 相互計算機</h2>
+<p>4つのうち<strong>3つを入力すると、残り1つを計算</strong>します。<br>
+式は <code>C = (m / MW) / V</code> （C=濃度, m=質量(g), MW=分子量, V=体積(L)）。</p>
 
-    <details style="margin-top:10px">
-      <summary>🧒 やさしい説明（A）</summary>
-      <div class="ex">
-        <p>① まず「何リットル（L）」かに直します。<br>
-        たとえば 100 mL は 0.1 L です。</p>
-        <p>② つくりたい濃さ（M）に、「何リットル」をかけると、必要な「モル（mol）」が出ます。<br>
-        <span class="hl">mol = M × L</span></p>
-        <p>③ その「モル」に、粉の重さの単位（分子量 g/mol）をかけると、必要な「グラム（g）」が出ます。<br>
-        <span class="hl">g = mol × 分子量</span></p>
-        <p>※ 0.001 g は 1 mg、0.000001 g は 1 µg です。</p>
-      </div>
-    </details>
-  </div>
+<div class="inlineinputs">
+  <label>質量(g):</label>
+  <input type="number" id="mass" step="any">
 
-  <!-- B) 希釈：原液からどれだけ取る？（C1V1=C2V2） -->
-  <div class="card">
-    <h2>B. 原液からどれだけ入れる？（Dilution：C1V1 = C2V2）</h2>
-    <div class="grid three">
-      <div>
-        <label>原液濃度 C1</label>
-        <div class="row">
-          <input id="c1" type="number" placeholder="例: 5" step="any" style="flex:1">
-          <select id="unitC1">
-            <option value="M">M</option><option value="mM" selected>mM</option><option value="uM">µM</option><option value="nM">nM</option><option value="%">%</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label>目標濃度 C2</label>
-        <div class="row">
-          <input id="c2" type="number" placeholder="例: 0.1" step="any" style="flex:1">
-          <select id="unitC2">
-            <option value="M">M</option><option value="mM" selected>mM</option><option value="uM">µM</option><option value="nM">nM</option><option value="%">%</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label>仕上げ体積 V2</label>
-        <div class="row">
-          <input id="v2" type="number" placeholder="例: 50" step="any" style="flex:1">
-          <select id="unitV2">
-            <option value="L">L</option><option value="mL" selected>mL</option><option value="uL">µL</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button onclick="calcDilution()">計算する</button>
-      <button class="secondary" onclick="clearDilution()">クリア</button>
-    </div>
-    <div id="outDil" class="out" style="display:none"></div>
+  <label>分子量:</label>
+  <input type="number" id="mw" step="any">
 
-    <details style="margin-top:10px">
-      <summary>🧒 やさしい説明（B）</summary>
-      <div class="ex">
-        <p>「こい原液」から「うすい液」を作るときの合言葉は、<span class="hl">C1 × V1 = C2 × V2</span> です。</p>
-        <p>① 作りたい「うすい液」の濃さ（C2）と量（V2）をかけると、<br>
-        必要な「濃い原液の量（V1）」が分かります。<br>
-        <span class="hl">V1 = (C2 × V2) / C1</span></p>
-        <p>② あとは、全体の量（V2）から原液（V1）を引いたぶんを、水や培地で足します。<br>
-        <span class="hl">溶媒 = V2 − V1</span></p>
-        <p>※ 単位は同じにそろえるのがコツ！（mL と µL などを混ぜない）</p>
-      </div>
-    </details>
-  </div>
+  <label>濃度(M):</label>
+  <input type="number" id="conc" step="any">
 
-  <!-- C) おまけ：必要体積を出す（Mass→Volume）-->
-  <div class="card">
-    <h2>C. もうひとつ：この重さ（g）を全部とかして何mLにすれば、この濃さ（M）？</h2>
-    <div class="grid three">
-      <div>
-        <label>分子量 MW（g/mol）</label>
-        <input id="mwC" type="number" placeholder="例: 180.16 (Glucose)" step="any">
-      </div>
-      <div>
-        <label>粉の重さ</label>
-        <div class="row">
-          <input id="mass" type="number" placeholder="例: 0.9" step="any" style="flex:1">
-          <select id="unitMass">
-            <option value="g" selected>g</option><option value="mg">mg</option><option value="ug">µg</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label>目標濃度</label>
-        <div class="row">
-          <input id="wantC" type="number" placeholder="例: 0.5" step="any" style="flex:1">
-          <select id="unitWantC">
-            <option value="M">M</option><option value="mM" selected>mM</option><option value="uM">µM</option><option value="nM">nM</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button onclick="calcVolumeFromMass()">計算する</button>
-      <button class="secondary" onclick="clearVol()">クリア</button>
-    </div>
-    <div id="outVol" class="out" style="display:none"></div>
+  <label>体積(L):</label>
+  <input type="number" id="vol" step="any">
+</div>
 
-    <details style="margin-top:10px">
-      <summary>🧒 やさしい説明（C）</summary>
-      <div class="ex">
-        <p>① 粉の重さ（g）を「モル」に変えます。<br>
-        <span class="hl">mol = g / 分子量</span></p>
-        <p>② つくりたい濃さ（M）でわると、必要なリットル（L）が出ます。<br>
-        <span class="hl">L = mol / M</span>（mLにしたい時は L×1000）</p>
-      </div>
-    </details>
-  </div>
+<button onclick="calc()">計算する</button>
+<div id="out" class="result"></div>
 
-  <div class="card">
-    <h2>メモ</h2>
-    <div class="row">
-      <span class="pill">mM=10⁻³M, µM=10⁻⁶M, nM=10⁻⁹M</span>
-      <span class="pill">1 L=1000 mL, 1 mL=1000 µL</span>
-      <span class="pill">1 g=1000 mg, 1 mg=1000 µg</span>
-    </div>
-    <p class="muted" style="margin-top:8px">密度や純度補正、pH調整は別計算です。必要なら拡張できます。</p>
-  </div>
+<div class="note">
+👉 入力例：<br>
+- 分子量=58.44, 濃度=0.1, 体積=0.1 を入力 → 必要な質量が出る<br>
+- 質量=0.5844, 分子量=58.44, 体積=0.1 を入力 → 濃度が出る
 </div>
 
 <script>
-// 単位変換ヘルパ
-const CtoM = u => ({M:1, mM:1e-3, uM:1e-6, nM:1e-9}[u] ?? 1);
-const VtoL = u => ({L:1, mL:1e-3, uL:1e-6}[u] ?? 1);
-const MtoG = u => ({g:1, mg:1e-3, ug:1e-6}[u] ?? 1);
-
-// 表示用きれいめフォーマット
-function fmt(x, d=4){
+function fmt(x){
   if (!isFinite(x)) return String(x);
-  const s = Number(x).toPrecision(d);
-  // 末尾の0と小数点を整形
-  return s.replace(/(\.\d*?[1-9])0+$/,'$1').replace(/\.0+$/,'').replace(/e\+/,'e');
-}
-function show(id, text){
-  const el = document.getElementById(id);
-  el.style.display = 'block';
-  el.textContent = text;
-}
-function hide(id){ document.getElementById(id).style.display='none'; }
-
-// A) 必要質量
-function calcMass(){
-  const mw = parseFloat(mwEl().value);
-  const C = parseFloat(document.getElementById('targetC').value);
-  const uC = document.getElementById('unitC').value;
-  const V = parseFloat(document.getElementById('targetV').value);
-  const uV = document.getElementById('unitV').value;
-  if(!(mw>0 && C>0 && V>0)){ show('outMass','入力を確認してください。'); return; }
-
-  const C_M = C * CtoM(uC);        // M
-  const V_L = V * VtoL(uV);        // L
-  const mol = C_M * V_L;           // mol
-  const g = mol * mw;              // g
-
-  // ベストな単位（g/mg/µg）に自動整形
-  let massStr;
-  if (g >= 1) massStr = `${fmt(g)} g`;
-  else if (g >= 1e-3) massStr = `${fmt(g*1e3)} mg`;
-  else massStr = `${fmt(g*1e6)} µg`;
-
-  const out =
-`【結果】入れる粉の量： ${massStr}
-
-— やさしい手順 —
-1) 体積をLに： ${fmt(V)} ${uV} → ${fmt(V_L)} L
-2) モルを計算： mol = M × L = ${fmt(C_M)} × ${fmt(V_L)} = ${fmt(mol)} mol
-3) グラムにする： g = mol × MW = ${fmt(mol)} × ${fmt(mw)} = ${fmt(g)} g`;
-  show('outMass', out);
-}
-function mwEl(){ return document.getElementById('mw'); }
-function clearMass(){
-  ['mw','targetC','targetV'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('unitC').value='M';
-  document.getElementById('unitV').value='mL';
-  hide('outMass');
+  return Number(x).toPrecision(5).replace(/(\.\d*?[1-9])0+$/,'$1').replace(/\.0+$/,'');
 }
 
-// B) 希釈
-function calcDilution(){
-  const c1 = parseFloat(document.getElementById('c1').value);
-  const u1 = document.getElementById('unitC1').value;
-  const c2 = parseFloat(document.getElementById('c2').value);
-  const u2 = document.getElementById('unitC2').value;
-  const v2 = parseFloat(document.getElementById('v2').value);
-  const uv2 = document.getElementById('unitV2').value;
-  if(!(c1>0 && c2>0 && v2>0)){ show('outDil','入力を確認してください。'); return; }
+function calc(){
+  let m = parseFloat(document.getElementById('mass').value);
+  let mw = parseFloat(document.getElementById('mw').value);
+  let c = parseFloat(document.getElementById('conc').value);
+  let v = parseFloat(document.getElementById('vol').value);
 
-  // 単位チェック：% 同士 / M系 同士
-  const isPercent = (u)=>u==='%';
-  if (isPercent(u1) !== isPercent(u2)){ show('outDil','濃度の単位は % 同士 か M系同士 にそろえてください。'); return; }
-
-  const C1 = isPercent(u1) ? c1 : c1 * CtoM(u1);   // M or %
-  const C2 = isPercent(u2) ? c2 : c2 * CtoM(u2);   // M or %
-  const V2 = v2 * VtoL(uv2);                       // L
-
-  if (C2 >= C1){ show('outDil','C2 は C1 より小さくしてください（希釈）。'); return; }
-
-  const V1 = (C2 * V2) / C1;       // L
-  const solvent = V2 - V1;         // L
-
-  // 表示（ユーザの体積単位に合わせて戻す）
-  const toUser = (L)=> {
-    if (uv2==='L') return `${fmt(L)} L`;
-    if (uv2==='mL') return `${fmt(L*1e3)} mL`;
-    return `${fmt(L*1e6)} µL`;
+  let known = [!isNaN(m), !isNaN(mw), !isNaN(c), !isNaN(v)].filter(x=>x).length;
+  if(known < 3){
+    document.getElementById('out').textContent = "⚠️ 4つのうち3つを入力してください。";
+    return;
   }
 
-  const out =
-`【結果】原液： ${toUser(V1)}、溶媒： ${toUser(solvent)}（合計 ${toUser(V2)}）
-
-— やさしい手順 —
-1) 公式：C1×V1 = C2×V2
-2) 求めたいのは V1： V1 = (C2 × V2) / C1
-3) 残りは溶媒： 溶媒 = V2 − V1`;
-  show('outDil', out);
-}
-function clearDilution(){
-  ['c1','c2','v2'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('unitC1').value='mM';
-  document.getElementById('unitC2').value='mM';
-  document.getElementById('unitV2').value='mL';
-  hide('outDil');
-}
-
-// C) 重さ→必要体積
-function calcVolumeFromMass(){
-  const mw = parseFloat(document.getElementById('mwC').value);
-  const m = parseFloat(document.getElementById('mass').value);
-  const um = document.getElementById('unitMass').value;
-  const c = parseFloat(document.getElementById('wantC').value);
-  const uc = document.getElementById('unitWantC').value;
-  if(!(mw>0 && m>0 && c>0)){ show('outVol','入力を確認してください。'); return; }
-
-  const g = m * MtoG(um);   // g
-  const mol = g / mw;       // mol
-  const C_M = c * CtoM(uc); // M
-  const L = mol / C_M;      // L
-  const mL = L*1e3, uL = L*1e6;
-
-  const best = L>=0.001 ? `${fmt(mL)} mL` : `${fmt(uL)} µL`;
-
-  const out =
-`【結果】仕上げ体積： 約 ${best}
-
-— やさしい手順 —
-1) モルに直す： mol = g / MW = ${fmt(g)} / ${fmt(mw)} = ${fmt(mol)} mol
-2) 体積を出す： L = mol / M = ${fmt(mol)} / ${fmt(C_M)} = ${fmt(L)} L
-3) mL に直す： ${fmt(L)} L = ${fmt(mL)} mL（または ${fmt(uL)} µL）`;
-  show('outVol', out);
-}
-function clearVol(){
-  ['mwC','mass','wantC'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('unitMass').value='g';
-  document.getElementById('unitWantC').value='mM';
-  hide('outVol');
-}
-</script>
-</body>
-</html>
+  // どれを計算するか
+  if(isNaN(m) && !isNaN(mw) && !isNaN(c) && !isNaN(v)){
+    m = c * v * mw; // g
+  } else if(isNaN(c) && !isNaN(m) && !
