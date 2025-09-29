@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>投与溶液組成計算機（Dose & Dilution Suite / One-Page）</title>
+<title>実験用 計算ツール集</title>
 <style>
   :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--muted:#94a3b8;--hi:#93c5fd}
   *{box-sizing:border-box}
@@ -21,24 +21,10 @@
   @media(min-width:760px){.grid2{grid-template-columns:1fr 1fr}}
   .line{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:6px 0}
   .line strong{min-width:7em}
-
-  /* 一行入力レイアウト */
-  .one-line{
-    display:flex; align-items:center; gap:14px;
-    white-space:nowrap; overflow-x:auto; padding:8px 10px;
-    border:1px solid #1f2937; border-radius:10px; background:#0b1220;
-  }
+  .one-line{display:flex;align-items:center;gap:14px;white-space:nowrap;overflow-x:auto;padding:8px 10px;border:1px solid #1f2937;border-radius:10px;background:#0b1220}
   label{margin-right:4px}
-  input[type="number"],input[type="text"]{
-    width:110px; max-width:40vw;
-    padding:6px 8px; border:1px solid #334155; border-radius:8px;
-    background:#0b1220; color:#e5e7eb;
-  }
-  select{
-    padding:6px 8px; border:1px solid #334155; border-radius:8px;
-    background:#0b1220; color:#e5e7eb;
-  }
-  .radio-inline{display:flex; align-items:center; gap:6px}
+  input[type="number"],input[type="text"]{width:110px;max-width:40vw;padding:6px 8px;border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e5e7eb}
+  select{padding:6px 8px;border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e5e7eb}
   table{width:100%;border-collapse:collapse;margin-top:8px}
   th,td{border:1px solid #1f2937;padding:8px;text-align:right}
   th{background:#0f1a32}
@@ -48,118 +34,91 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>投与溶液組成計算機（All-in-One）</h1>
+  <h1>実験用 計算ツール集</h1>
 
-  <!-- 投与溶液（ステップ1+2） -->
+  <!-- 1. モル濃度（Selleck式：一行入力・自動推論） -->
   <div class="card">
-    <h2>ステップ1：実験データ</h2>
-    <p class="muted">実験操作ロスを考慮し、<b>動物数+1匹</b>で計算することを推奨（下でON/OFF）。</p>
-    <div class="line"><strong>投与量:</strong><input id="dose_mgkg" type="number" step="any" placeholder="例: 10"><span>mg/kg</span></div>
-    <div class="line"><strong>動物平均体重:</strong><input id="avg_g" type="number" step="any" placeholder="例: 22"><span>g</span></div>
-    <div class="line"><strong>投与体積(動物毎):</strong><input id="vol_uL" type="number" step="any" placeholder="例: 200"><span>μL</span></div>
-    <div class="line"><strong>動物数:</strong><input id="n_animals" type="number" step="1" placeholder="例: 5">
-      <label style="display:flex;align-items:center;gap:6px;margin-left:8px"><input id="add_one" type="checkbox" checked> +1匹で計算</label>
-    </div>
-
-    <h2 style="margin-top:16px">ステップ2：投与溶媒の組成（%）</h2>
-    <p class="muted">例：DMSO 10% + PEG300 40% + Tween80 5% + ddH₂O 45% = 100%</p>
-    <div class="grid2">
-      <div class="line"><strong>DMSO:</strong><input id="p_dmsO" type="number" step="any" value="10"><span>%</span></div>
-      <div class="line"><strong>PEG300:</strong><input id="p_peg" type="number" step="any" value="40"><span>%</span></div>
-      <div class="line"><strong>Tween 80:</strong><input id="p_tw" type="number" step="any" value="5"><span>%</span></div>
-      <div class="line"><strong>ddH₂O:</strong><input id="p_h2o" type="number" step="any" value="45"><span>%</span></div>
-    </div>
-    <div class="line" style="margin-top:10px">
-      <button class="btn primary" onclick="calcDose()">計算</button>
-      <button class="btn secondary" onclick="resetDose()">リセット</button>
-    </div>
-    <div id="outDose" class="out" style="display:none"></div>
-  </div>
-
-  <!-- Selleck式：一行入力 -->
-  <div class="card">
-    <h2>Selleck式 モル濃度計算（入力1行・相互計算）</h2>
-    <p class="muted">式：<span class="eq">mg = mM × mL × g/mol</span>。計算したい項目にチェックを付け、他を入力。</p>
-    <div class="one-line" aria-label="Selleck式 一行入力">
-      <label>質量:</label><input id="mass" type="number" step="any" placeholder="数値">
+    <h2>モル濃度計算（Selleck式 / 入力1行・自動推論）</h2>
+    <p class="muted">式：<span class="eq">mg = mM × mL × g/mol</span>。<b>4項目のうち1つだけ空欄</b>にして「計算」を押すと、その値を求めます。</p>
+    <div class="one-line">
+      <label>質量:</label>
+      <input id="mass" type="number" step="any" placeholder="数値">
       <select id="uMass"><option>mg</option><option>g</option><option>µg</option></select>
-      <label class="radio-inline"><input type="radio" name="solve" value="mass">これを計算</label>
 
-      <label>濃度:</label><input id="conc" type="number" step="any" placeholder="数値">
+      <label>濃度:</label>
+      <input id="conc" type="number" step="any" placeholder="数値">
       <select id="uConc"><option>mM</option><option>M</option><option>µM</option><option>nM</option></select>
-      <label class="radio-inline"><input type="radio" name="solve" value="conc">これを計算</label>
 
-      <label>体積:</label><input id="vol" type="number" step="any" placeholder="数値">
+      <label>体積:</label>
+      <input id="vol" type="number" step="any" placeholder="数値">
       <select id="uVol"><option>mL</option><option>L</option><option>µL</option></select>
-      <label class="radio-inline"><input type="radio" name="solve" value="vol">これを計算</label>
 
-      <label>分子量:</label><input id="mw" type="number" step="any" placeholder="g/mol" style="width:130px">
+      <label>分子量:</label>
+      <input id="mw" type="number" step="any" placeholder="g/mol" style="width:130px">
     </div>
-    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
-      <button class="btn primary" onclick="calcSelleck()">計算</button>
+    <div style="margin-top:10px">
+      <button class="btn primary" onclick="calcSelleckAuto()">計算</button>
       <button class="btn secondary" onclick="resetSelleck()">リセット</button>
     </div>
     <div id="outS" class="out" style="display:none"></div>
   </div>
 
-  <!-- 希釈 C1V1 = C2V2：一行入力 -->
+  <!-- 2. 希釈計算（C1V1=C2V2：一行入力） -->
   <div class="card">
     <h2>希釈計算（C1V1 = C2V2 / 入力1行）</h2>
-    <p class="muted">未入力を<b>1つだけ</b>作って計算。M 系同士 or % 同士でそろえてください。</p>
-    <div class="one-line" aria-label="希釈 一行入力">
-      <label>C1:</label><input id="c1" type="number" step="any" placeholder="濃度">
-      <select id="uC1"><option>M</option><option selected>mM</option><option>µM</option><option>nM</option><option>%</option></select>
-
-      <label>V1:</label><input id="v1" type="number" step="any" placeholder="体積">
-      <select id="uV1"><option>L</option><option selected>mL</option><option>µL</option></select>
-
+    <p class="muted">未入力を<b>1つ</b>作って計算。M系同士 or %同士にそろえる。</p>
+    <div class="one-line">
+      <label>C1:</label><input id="c1" type="number"><select id="uC1"><option>M</option><option selected>mM</option><option>µM</option><option>nM</option><option>%</option></select>
+      <label>V1:</label><input id="v1" type="number"><select id="uV1"><option>L</option><option selected>mL</option><option>µL</option></select>
       <span style="font-weight:700">=</span>
-
-      <label>C2:</label><input id="c2" type="number" step="any" placeholder="濃度">
-      <select id="uC2"><option>M</option><option selected>mM</option><option>µM</option><option>nM</option><option>%</option></select>
-
-      <label>V2:</label><input id="v2" type="number" step="any" placeholder="体積">
-      <select id="uV2"><option>L</option><option selected>mL</option><option>µL</option></select>
+      <label>C2:</label><input id="c2" type="number"><select id="uC2"><option>M</option><option selected>mM</option><option>µM</option><option>nM</option><option>%</option></select>
+      <label>V2:</label><input id="v2" type="number"><select id="uV2"><option>L</option><option selected>mL</option><option>µL</option></select>
     </div>
-    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
+    <div style="margin-top:10px">
       <button class="btn primary" onclick="calcDil()">計算</button>
       <button class="btn secondary" onclick="resetDil()">リセット</button>
     </div>
     <div id="outDil" class="out" style="display:none"></div>
   </div>
 
-  <!-- 連続希釈 -->
+  <!-- 3. 投与溶液組成 -->
   <div class="card">
-    <h2>連続希釈計算</h2>
-    <div class="line"><strong>初めの濃度 C0:</strong><input id="c0" type="number" step="any"><select id="uC0"><option>M</option><option selected>mM</option><option>µM</option><option>nM</option></select></div>
-    <div class="line"><strong>稀釈倍数 X:</strong><input id="xf" type="number" step="any" placeholder="例: 10"></div>
-    <div class="line"><button class="btn primary" onclick="calcSerial()">計算</button></div>
-    <div id="outSerial" class="out" style="display:none"></div>
-    <div style="overflow-x:auto">
-      <table id="tblSerial" style="display:none">
-        <thead><tr><th>段数</th><th>濃度</th><th>単位</th><th>log10(濃度[M])</th></tr></thead>
-        <tbody></tbody>
-      </table>
+    <h2>投与溶液組成計算機</h2>
+    <p class="muted">動物数は+1匹で計算推奨。%は合計100%に。</p>
+    <div class="line"><strong>投与量:</strong><input id="dose_mgkg" type="number"><span>mg/kg</span></div>
+    <div class="line"><strong>平均体重:</strong><input id="avg_g" type="number"><span>g</span></div>
+    <div class="line"><strong>投与体積:</strong><input id="vol_uL" type="number"><span>µL</span></div>
+    <div class="line"><strong>動物数:</strong><input id="n_animals" type="number"><label><input id="add_one" type="checkbox" checked> +1匹で計算</label></div>
+    <div class="grid2">
+      <div class="line"><strong>DMSO:</strong><input id="p_dmsO" type="number" value="10"><span>%</span></div>
+      <div class="line"><strong>PEG300:</strong><input id="p_peg" type="number" value="40"><span>%</span></div>
+      <div class="line"><strong>Tween80:</strong><input id="p_tw" type="number" value="5"><span>%</span></div>
+      <div class="line"><strong>ddH₂O:</strong><input id="p_h2o" type="number" value="45"><span>%</span></div>
     </div>
+    <div style="margin-top:10px">
+      <button class="btn primary" onclick="calcDose()">計算</button>
+      <button class="btn secondary" onclick="resetDose()">リセット</button>
+    </div>
+    <div id="outDose" class="out" style="display:none"></div>
   </div>
 
-  <!-- 分子量計算 -->
+  <!-- 4. 連続希釈 -->
+  <div class="card">
+    <h2>連続希釈計算</h2>
+    <div class="line"><strong>初期濃度 C0:</strong><input id="c0" type="number"><select id="uC0"><option>M</option><option selected>mM</option><option>µM</option><option>nM</option></select></div>
+    <div class="line"><strong>稀釈倍数 X:</strong><input id="xf" type="number" placeholder="例: 10"></div>
+    <div><button class="btn primary" onclick="calcSerial()">計算</button></div>
+    <div id="outSerial" class="out" style="display:none"></div>
+    <table id="tblSerial" style="display:none"><thead><tr><th>段</th><th>濃度</th><th>単位</th><th>log10</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <!-- 5. 分子量 -->
   <div class="card">
     <h2>分子量計算（化学式 → モル質量）</h2>
     <div class="line"><strong>化学式:</strong><input id="formula" type="text" placeholder="例: C10H16N2O2"></div>
-    <div class="line">
-      <button class="btn primary" onclick="calcMW()">計算</button>
-      <span class="muted">※ 化学式は大文字小文字を区別（C と c は別）。括弧と係数に対応。</span>
-    </div>
+    <div><button class="btn primary" onclick="calcMW()">計算</button></div>
     <div id="outMW" class="out" style="display:none"></div>
-    <div style="overflow-x:auto">
-      <table id="tblMW" style="display:none">
-        <thead><tr><th>元素</th><th>個数</th><th>原子量</th><th>寄与質量</th></tr></thead>
-        <tbody></tbody>
-        <tfoot><tr><th colspan="3">合計</th><th id="mwSum"></th></tr></tfoot>
-      </table>
-    </div>
-    <p class="muted" style="margin-top:6px">* 貯蔵液を準備する時は、実ボトルのラベル/SDS/COAに記載のロット固有MWを参照してください。</p>
+    <table id="tblMW" style="display:none"><thead><tr><th>元素</th><th>数</th><th>原子量</th><th>寄与</th></tr></thead><tbody></tbody><tfoot><tr><th colspan="3">合計</th><th id="mwSum"></th></tr></tfoot></table>
   </div>
 </div>
 
@@ -175,7 +134,119 @@ const mg_toBest=mg=>mg>=1000?{v:mg/1000,u:'g'}:mg>=1?{v:mg,u:'mg'}:{v:mg*1000,u:
 function show(id, text){const el=document.getElementById(id); el.style.display='block'; el.textContent=text;}
 function hide(id){document.getElementById(id).style.display='none';}
 
-/* ===== 投与溶液 ===== */
+/* ===== 1) モル濃度（Selleck式：自動推論） =====
+   mg = mM × mL × MW
+   未入力が1つだけ → それを解く
+*/
+function calcSelleckAuto(){
+  const mass   = document.getElementById('mass').value.trim();
+  const conc   = document.getElementById('conc').value.trim();
+  const vol    = document.getElementById('vol').value.trim();
+  const mw     = document.getElementById('mw').value.trim();
+  const uMass  = document.getElementById('uMass').value;
+  const uConc  = document.getElementById('uConc').value;
+  const uVol   = document.getElementById('uVol').value;
+
+  const out = document.getElementById('outS'); out.style.display='block';
+
+  // 未入力カウント
+  const empties = [mass==='', conc==='', vol==='', mw===''].filter(Boolean).length;
+  if(empties!==1){ out.textContent='質量・濃度・体積・分子量のうち、ちょうど1つだけ空欄にしてください。'; return; }
+
+  const mg  = mass!==''? massTo_mg(parseFloat(mass), uMass) : NaN;
+  const mM  = conc!==''? concTo_mM(parseFloat(conc), uConc) : NaN;
+  const mL  = vol!=='' ? volTo_mL(parseFloat(vol),  uVol)   : NaN;
+  const MW  = mw!==''  ? parseFloat(mw) : NaN;
+
+  // 入力値の妥当性チェック（入力されている値は >0 が望ましい）
+  const pos = v => isFinite(v) && v>0;
+
+  // どれを解く？
+  if(isNaN(mg)){ // 質量 = mM*mL*MW
+    if(!(pos(mM)&&pos(mL)&&pos(MW))){ out.textContent='入力値を確認してください（濃度・体積・分子量）。'; return; }
+    const mgCalc = mM*mL*MW;
+    const best = mg_toBest(mgCalc);
+    out.textContent = `【結果】質量: ${fmt(mgCalc)} mg  ≈  ${fmt(best.v)} ${best.u}\n式: mg = ${fmt(mM)} mM × ${fmt(mL)} mL × ${fmt(MW)} g/mol`;
+    return;
+  }
+  if(isNaN(mM)){ // 濃度 = mg/(mL*MW)
+    if(!(pos(mg)&&pos(mL)&&pos(MW))){ out.textContent='入力値を確認してください（質量・体積・分子量）。'; return; }
+    const mMcalc = mg/(mL*MW);
+    const best = mM_toBest(mMcalc);
+    out.textContent = `【結果】濃度: ${fmt(mMcalc)} mM  ≈  ${fmt(best.v)} ${best.u}\n式: mM = ${fmt(mg)} mg ÷ (${fmt(mL)} mL × ${fmt(MW)} g/mol)`;
+    return;
+  }
+  if(isNaN(mL)){ // 体積 = mg/(mM*MW)
+    if(!(pos(mg)&&pos(mM)&&pos(MW))){ out.textContent='入力値を確認してください（質量・濃度・分子量）。'; return; }
+    const mLcalc = mg/(mM*MW);
+    const best = mL_toBest(mLcalc);
+    out.textContent = `【結果】体積: ${fmt(mLcalc)} mL  ≈  ${fmt(best.v)} ${best.u}\n式: mL = ${fmt(mg)} mg ÷ (${fmt(mM)} mM × ${fmt(MW)} g/mol)`;
+    return;
+  }
+  if(isNaN(MW)){ // 分子量 = mg/(mM*mL)
+    if(!(pos(mg)&&pos(mM)&&pos(mL))){ out.textContent='入力値を確認してください（質量・濃度・体積）。'; return; }
+    const MWcalc = mg/(mM*mL);
+    out.textContent = `【結果】分子量: ${fmt(MWcalc)} g/mol\n式: MW = ${fmt(mg)} mg ÷ (${fmt(mM)} mM × ${fmt(mL)} mL)`;
+    return;
+  }
+}
+
+function resetSelleck(){
+  ['mass','conc','vol','mw'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('uMass').value='mg';
+  document.getElementById('uConc').value='mM';
+  document.getElementById('uVol').value='mL';
+  hide('outS');
+}
+
+/* ===== 2) 希釈 C1V1=C2V2（一行入力） ===== */
+function calcDil(){
+  const c1=parseFloat(document.getElementById('c1').value), uC1=document.getElementById('uC1').value;
+  const v1=parseFloat(document.getElementById('v1').value), uV1=document.getElementById('uV1').value;
+  const c2=parseFloat(document.getElementById('c2').value), uC2=document.getElementById('uC2').value;
+  const v2=parseFloat(document.getElementById('v2').value), uV2=document.getElementById('uV2').value;
+
+  const out=document.getElementById('outDil'); out.style.display='block';
+  const isPct=u=>u==='%';
+  if ((isPct(uC1)&&!isPct(uC2)) || (!isPct(uC1)&&isPct(uC2))){
+    out.textContent='濃度の単位は % 同士 か M系同士 に揃えてください。'; return;
+  }
+
+  let C1=isFinite(c1)? (isPct(uC1)? c1 : concTo_mM(c1,uC1)*1e-3) : NaN; // → M or %
+  let C2=isFinite(c2)? (isPct(uC2)? c2 : concTo_mM(c2,uC2)*1e-3) : NaN; // mM→M
+  let V1=isFinite(v1)? volTo_mL(v1,uV1)/1000 : NaN; // → L
+  let V2=isFinite(v2)? volTo_mL(v2,uV2)/1000 : NaN; // → L
+
+  const unknowns=[isNaN(C1),isNaN(V1),isNaN(C2),isNaN(V2)].filter(Boolean).length;
+  if(unknowns!==1){ out.textContent='C1/V1/C2/V2 のうち、ちょうど1つを空欄にしてください。'; return; }
+
+  if(isNaN(V1) && isFinite(C1) && isFinite(C2) && isFinite(V2)) V1=(C2*V2)/C1;
+  else if(isNaN(V2) && isFinite(C1) && isFinite(C2) && isFinite(V1)) V2=(C1*V1)/C2;
+  else if(isNaN(C1) && isFinite(V1) && isFinite(C2) && isFinite(V2)) C1=(C2*V2)/V1;
+  else if(isNaN(C2) && isFinite(V2) && isFinite(C1) && isFinite(V1)) C2=(C1*V1)/V2;
+
+  const v1Best=mL_toBest(V1*1000), v2Best=mL_toBest(V2*1000);
+  const c1Disp=isPct(uC1)? `${fmt(C1)} %` : (()=>{const b=mM_toBest(C1*1e3); return `${fmt(b.v)} ${b.u}`;})();
+  const c2Disp=isPct(uC2)? `${fmt(C2)} %` : (()=>{const b=mM_toBest(C2*1e3); return `${fmt(b.v)} ${b.u}`;})();
+
+  out.textContent =
+`C1×V1 = C2×V2
+
+C1: ${c1Disp}
+V1: ${fmt(v1Best.v)} ${v1Best.u}
+C2: ${c2Disp}
+V2: ${fmt(v2Best.v)} ${v2Best.u}
+
+溶媒量（V2−V1）: ${fmt(v2Best.v - (V1*1000))} ${v2Best.u}`;
+}
+function resetDil(){
+  ['c1','v1','c2','v2'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('uC1').value='mM'; document.getElementById('uC2').value='mM';
+  document.getElementById('uV1').value='mL'; document.getElementById('uV2').value='mL';
+  hide('outDil');
+}
+
+/* ===== 3) 投与溶液 ===== */
 function calcDose(){
   const dose=parseFloat(document.getElementById('dose_mgkg').value); // mg/kg
   const avg_g=parseFloat(document.getElementById('avg_g').value);    // g
@@ -212,9 +283,7 @@ PEG300: ${fmt(vP)} mL
 Tween80: ${fmt(vT)} mL
 ddH₂O: ${fmt(vW)} mL
 
-【作業メモ】
-1) APIを DMSO(+一部PEG) で溶かす → 2) Tween80 → 3) ddH₂Oで仕上げ体積へ。
-* 実験SOP/安全情報に従ってください。`;
+【作業メモ】APIを DMSO(+一部PEG) → Tween80 → ddH₂O の順で溶解・仕上げ。SOP/安全情報に従ってください。`;
   show('outDose', text);
 }
 function resetDose(){
@@ -224,93 +293,7 @@ function resetDose(){
   document.getElementById('add_one').checked=true; hide('outDose');
 }
 
-/* ===== Selleck式（相互計算・一行入力） ===== */
-function calcSelleck(){
-  const tgt=document.querySelector('input[name="solve"]:checked')?.value;
-  const mass=parseFloat(document.getElementById('mass').value);
-  const uMass=document.getElementById('uMass').value;
-  const conc=parseFloat(document.getElementById('conc').value);
-  const uConc=document.getElementById('uConc').value;
-  const vol=parseFloat(document.getElementById('vol').value);
-  const uVol=document.getElementById('uVol').value;
-  const mw=parseFloat(document.getElementById('mw').value);
-
-  const out=document.getElementById('outS'); out.style.display='block';
-  if(!tgt){ out.textContent='計算したい項目（これを計算）にチェックしてください。'; return; }
-  if(!(mw>0)){ out.textContent='分子量（g/mol）を入力してください。'; return; }
-
-  const mg=isFinite(mass)? massTo_mg(mass,uMass) : NaN;
-  const mM=isFinite(conc)? concTo_mM(conc,uConc) : NaN;
-  const mL=isFinite(vol) ? volTo_mL(vol,uVol)    : NaN;
-
-  // mg = mM × mL × MW
-  if(tgt==='mass'){
-    if(!(mM>0 && mL>0)){ out.textContent='濃度と体積を入力してください。'; return; }
-    const mgCalc=mM*mL*mw; const best=mg_toBest(mgCalc);
-    out.textContent=`質量 = 濃度 × 体積 × 分子量 = ${fmt(mM)} mM × ${fmt(mL)} mL × ${fmt(mw)} g/mol = ${fmt(mgCalc)} mg ≈ ${fmt(best.v)} ${best.u}`;
-  }else if(tgt==='conc'){
-    if(!(isFinite(mg) && mL>0)){ out.textContent='質量と体積を入力してください。'; return; }
-    const mMcalc=mg/(mL*mw); const best=mM_toBest(mMcalc);
-    out.textContent=`濃度 = 質量 ÷ (体積 × 分子量) = ${fmt(mg)} mg ÷ (${fmt(mL)} mL × ${fmt(mw)} g/mol) = ${fmt(mMcalc)} mM ≈ ${fmt(best.v)} ${best.u}`;
-  }else if(tgt==='vol'){
-    if(!(isFinite(mg) && mM>0)){ out.textContent='質量と濃度を入力してください。'; return; }
-    const mLcalc=mg/(mM*mw); const best=mL_toBest(mLcalc);
-    out.textContent=`体積 = 質量 ÷ (濃度 × 分子量) = ${fmt(mg)} mg ÷ (${fmt(mM)} mM × ${fmt(mw)} g/mol) = ${fmt(mLcalc)} mL ≈ ${fmt(best.v)} ${best.u}`;
-  }
-}
-function resetSelleck(){
-  ['mass','conc','vol','mw'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('uMass').value='mg'; document.getElementById('uConc').value='mM'; document.getElementById('uVol').value='mL';
-  const r=document.querySelector('input[name="solve"]:checked'); if(r) r.checked=false;
-  document.getElementById('outS').style.display='none';
-}
-
-/* ===== 希釈 C1V1=C2V2（一行入力） ===== */
-function calcDil(){
-  const c1=parseFloat(document.getElementById('c1').value), uC1=document.getElementById('uC1').value;
-  const v1=parseFloat(document.getElementById('v1').value), uV1=document.getElementById('uV1').value;
-  const c2=parseFloat(document.getElementById('c2').value), uC2=document.getElementById('uC2').value;
-  const v2=parseFloat(document.getElementById('v2').value), uV2=document.getElementById('uV2').value;
-
-  const out=document.getElementById('outDil'); out.style.display='block';
-  const isPct=u=>u==='%';
-  if ((isPct(uC1)&&!isPct(uC2)) || (!isPct(uC1)&&isPct(uC2))){ out.textContent='濃度の単位は % 同士 か M系同士 に揃えてください。'; return; }
-
-  let C1=isFinite(c1)? (isPct(uC1)? c1 : concTo_mM(c1,uC1)*1e-3) : NaN; // → M or %
-  let C2=isFinite(c2)? (isPct(uC2)? c2 : concTo_mM(c2,uC2)*1e-3) : NaN; // mM→M
-  let V1=isFinite(v1)? volTo_mL(v1,uV1)/1000 : NaN; // → L
-  let V2=isFinite(v2)? volTo_mL(v2,uV2)/1000 : NaN; // → L
-
-  const unknowns=[isNaN(C1),isNaN(V1),isNaN(C2),isNaN(V2)].filter(Boolean).length;
-  if(unknowns!==1){ out.textContent='C1/V1/C2/V2 のうち、ちょうど1つを空欄にしてください。'; return; }
-
-  if(isNaN(V1) && isFinite(C1) && isFinite(C2) && isFinite(V2)) V1=(C2*V2)/C1;
-  else if(isNaN(V2) && isFinite(C1) && isFinite(C2) && isFinite(V1)) V2=(C1*V1)/C2;
-  else if(isNaN(C1) && isFinite(V1) && isFinite(C2) && isFinite(V2)) C1=(C2*V2)/V1;
-  else if(isNaN(C2) && isFinite(V2) && isFinite(C1) && isFinite(V1)) C2=(C1*V1)/V2;
-
-  const v1Best=mL_toBest(V1*1000), v2Best=mL_toBest(V2*1000);
-  const c1Disp=isPct(uC1)? `${fmt(C1)} %` : (()=>{const b=mM_toBest(C1*1e3); return `${fmt(b.v)} ${b.u}`;})();
-  const c2Disp=isPct(uC2)? `${fmt(C2)} %` : (()=>{const b=mM_toBest(C2*1e3); return `${fmt(b.v)} ${b.u}`;})();
-
-  out.textContent =
-`C1×V1 = C2×V2
-
-C1: ${c1Disp}
-V1: ${fmt(v1Best.v)} ${v1Best.u}
-C2: ${c2Disp}
-V2: ${fmt(v2Best.v)} ${v2Best.u}
-
-溶媒量（V2−V1）: ${fmt(v2Best.v - (V1*1000))} ${v2Best.u}`;
-}
-function resetDil(){
-  ['c1','v1','c2','v2'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('uC1').value='mM'; document.getElementById('uC2').value='mM';
-  document.getElementById('uV1').value='mL'; document.getElementById('uV2').value='mL';
-  hide('outDil');
-}
-
-/* ===== 連続希釈 ===== */
+/* ===== 4) 連続希釈 ===== */
 function calcSerial(){
   const c0=parseFloat(document.getElementById('c0').value);
   const u0=document.getElementById('uC0').value;
@@ -326,13 +309,13 @@ function calcSerial(){
     const best=mM_toBest(Ci_M*1e3); // → mM系表示
     const log10=Math.log10(Ci_M);
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>C${i} = C${i-1>=1?i-1:0}/${X}</td><td>${fmt(best.v)}</td><td>${best.u}</td><td>${isFinite(log10)?fmt(log10,5):'−∞'}</td>`;
+    tr.innerHTML=`<td>C${i}</td><td>${fmt(best.v)}</td><td>${best.u}</td><td>${isFinite(log10)?fmt(log10,5):'−∞'}</td>`;
     tbody.appendChild(tr);
   }
   document.getElementById('tblSerial').style.display='table';
 }
 
-/* ===== 分子量（化学式） ===== */
+/* ===== 5) 分子量（化学式） ===== */
 const AWT={H:1.00794, He:4.002602, Li:6.941, Be:9.012182, B:10.811, C:12.0107, N:14.0067, O:15.9994,
 F:18.9984032, Ne:20.1797, Na:22.98976928, Mg:24.3050, Al:26.9815386, Si:28.0855, P:30.973762, S:32.065,
 Cl:35.453, K:39.0983, Ar:39.948, Ca:40.078, Sc:44.955912, Ti:47.867, V:50.9415, Cr:51.9961, Mn:54.938045,
@@ -341,8 +324,8 @@ Br:79.904, Kr:83.798, Rb:85.4678, Sr:87.62, Y:88.90585, Zr:91.224, Nb:92.90638, 
 Rh:102.90550, Pd:106.42, Ag:107.8682, Cd:112.411, In:114.818, Sn:118.710, Sb:121.760, Te:127.60,
 I:126.90447, Xe:131.293, Cs:132.9054519, Ba:137.327, La:138.90547, Ce:140.116, Pr:140.90765, Nd:144.242,
 Sm:150.36, Eu:151.964, Gd:157.25, Tb:158.92535, Dy:162.500, Ho:164.93032, Er:167.259, Tm:168.93421,
-Yb:173.054, Lu:174.9668, Hf:178.49, Ta:180.94788, W:183.84, Re:186.207, Os:190.23, Ir:192.217,
-Pt:195.084, Au:196.966569, Hg:200.59, Tl:204.3833, Pb:207.2, Bi:208.98040};
+Yb:173.054, Lu:174.9668, Hf:178.49, Ta:180.94788, W:183.84, Re:186.207, Os:190.23, Ir:192.217, Pt:195.084,
+Au:196.966569, Hg:200.59, Tl:204.3833, Pb:207.2, Bi:208.98040};
 
 function parseFormula(s){
   s=s.trim(); let i=0;
